@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dictionary</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:transparent;color:#f0ebe0;font-family:'DM Sans',sans-serif;padding:2rem 1rem}
+.container{max-width:720px;margin:0 auto}
+.hero{text-align:center;margin-bottom:2rem}
+.hero h1{font-family:'Playfair Display',serif;font-size:32px;font-weight:600;letter-spacing:-0.5px;color:#f0ebe0}
+.hero p{font-size:13px;color:#888;margin-top:6px}
+.search-row{display:flex;gap:8px;margin-bottom:1.5rem}
+#inp{flex:1;padding:13px 18px;font-size:16px;font-family:'DM Sans',sans-serif;border:0.5px solid #333;border-radius:14px;background:#1a1916;color:#f0ebe0;outline:none;transition:border-color 0.2s}
+#inp:focus{border-color:#c47a0f}
+#inp::placeholder{color:#555}
+#btn{padding:13px 26px;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;border:none;border-radius:14px;background:#c47a0f;color:#fff;cursor:pointer;transition:background 0.2s}
+#btn:hover{background:#a86400}
+#btn:disabled{opacity:0.5;cursor:not-allowed}
+.word-img{width:100%;max-height:160px;object-fit:cover;border-radius:12px;border:0.5px solid #2a2826;margin-bottom:16px;display:block}
+.word-title{font-family:'Playfair Display',serif;font-style:italic;font-size:40px;font-weight:400;color:#c47a0f;line-height:1}
+.phonetics{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.phonetic-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;border:0.5px solid #2e2c28;background:#1e1c18;font-size:13px;color:#aaa}
+.phonetic-badge span{font-weight:500;color:#f0ebe0}
+.play-btn{width:24px;height:24px;border-radius:50%;border:0.5px solid #c47a0f;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#c47a0f;padding:0;flex-shrink:0}
+.play-btn svg{width:9px;height:9px;fill:currentColor;margin-left:1px}
+.source-row{margin-top:10px;font-size:12px;color:#555;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.source-pill{padding:3px 10px;border-radius:100px;border:0.5px solid #2e2c28;font-size:12px;color:#888;background:#1a1916;text-decoration:none}
+.source-pill:hover{color:#c47a0f;border-color:#c47a0f}
+.meaning-card{background:#161410;border:0.5px solid #2a2826;border-radius:14px;padding:1.25rem 1.4rem;margin-bottom:10px;margin-top:14px}
+.pos{font-family:'Playfair Display',serif;font-style:italic;font-size:16px;color:#c47a0f;margin-bottom:12px}
+.def-item{margin-bottom:14px;padding-bottom:14px;border-bottom:0.5px solid #222}
+.def-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.def-num{font-size:12px;font-weight:500;color:#555;margin-bottom:4px}
+.def-text{font-size:15px;color:#d4cfc5;line-height:1.7}
+.example{border-left:2px solid #c47a0f;margin-top:8px;padding-left:12px;font-size:13px;color:#888;font-style:italic}
+.tags-row{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.tag-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;margin-right:2px}
+.syn-label{color:#c47a0f}
+.ant-label{color:#b85c38}
+.tag{padding:3px 10px;border-radius:100px;border:0.5px solid #2e2c28;font-size:12px;color:#888;cursor:pointer;background:transparent;transition:all 0.15s;font-family:'DM Sans',sans-serif}
+.syn-tag:hover{background:rgba(196,122,15,0.12);color:#c47a0f;border-color:#c47a0f}
+.ant-tag:hover{background:rgba(184,92,56,0.12);color:#b85c38;border-color:#b85c38}
+.origin-card{background:#111;border:0.5px solid #2a2826;border-radius:10px;padding:1rem 1.25rem;margin-top:10px;font-size:13px;color:#888;line-height:1.7}
+.origin-card strong{color:#ccc;font-weight:500}
+.empty{text-align:center;padding:3rem;color:#555;font-size:14px}
+.loading{text-align:center;padding:2rem;color:#888;font-size:14px}
+.error{text-align:center;padding:1.25rem;color:#b85c38;font-size:13px;background:rgba(184,92,56,0.08);border-radius:10px;border:0.5px solid rgba(184,92,56,0.25)}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <h1>Find your words</h1>
+    <p>Definitions &middot; Phonetics &middot; Synonyms &middot; Images &middot; Source</p>
+  </div>
+  <div class="search-row">
+    <input type="text" id="inp" placeholder="Type any English word..." autofocus/>
+    <button id="btn">Search</button>
+  </div>
+  <div id="results"><div class="empty">Type a word above and press Search ✦</div></div>
+</div>
+
+<script>
+(function() {
+  var inp = document.getElementById('inp');
+  var btn = document.getElementById('btn');
+  var results = document.getElementById('results');
+
+  btn.addEventListener('click', lookup);
+  inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') lookup(); });
+
+  function lookup() {
+    var w = inp.value.trim().toLowerCase();
+    if (!w) return;
+    results.innerHTML = '<div class="loading">Looking up...</div>';
+    btn.disabled = true;
+
+    var dictUrl = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w);
+    var wikiUrl = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(w);
+
+    var dictPromise = fetch(dictUrl).then(function(r) {
+      if (!r.ok) return Promise.reject('not found');
+      return r.json();
+    });
+    var wikiPromise = fetch(wikiUrl).then(function(r) {
+      return r.ok ? r.json() : null;
+    }).catch(function() { return null; });
+
+    Promise.all([dictPromise, wikiPromise]).then(function(vals) {
+      var raw = vals[0];
+      var wiki = vals[1];
+
+      // Strictly filter: only entries whose word exactly matches the search
+      var data = raw.filter(function(e) {
+        return e.word.toLowerCase() === w;
+      });
+
+      // If nothing matched exactly, show error
+      if (!data.length) {
+        results.innerHTML = '<div class="error">No exact definition found for "' + w + '". Try checking the spelling.</div>';
+        return;
+      }
+
+      var imgUrl = '';
+      if (wiki && wiki.thumbnail && wiki.thumbnail.source) {
+        // Only use wiki image if the wiki title roughly matches the word
+        var wikiTitle = (wiki.title || '').toLowerCase();
+        if (wikiTitle.indexOf(w) !== -1) {
+          imgUrl = wiki.thumbnail.source;
+        }
+      }
+      render(data, w, imgUrl);
+    }).catch(function() {
+      results.innerHTML = '<div class="error">No definition found for "' + w + '". Check spelling or try another word.</div>';
+    }).finally(function() {
+      btn.disabled = false;
+    });
+  }
+
+  function unique(arr) {
+    return arr.filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+  }
+
+  function flatMap(arr, fn) {
+    var out = [];
+    arr.forEach(function(x) { var r = fn(x); if (Array.isArray(r)) r.forEach(function(v) { out.push(v); }); });
+    return out;
+  }
+
+  function render(data, word, imgUrl) {
+    var entry = data[0];
+    var wrap = document.createElement('div');
+
+    if (imgUrl) {
+      var img = document.createElement('img');
+      img.className = 'word-img';
+      img.src = imgUrl;
+      img.alt = word;
+      img.addEventListener('error', function() { img.style.display = 'none'; });
+      wrap.appendChild(img);
+    }
+
+    var title = document.createElement('div');
+    title.className = 'word-title';
+    title.textContent = entry.word;
+    wrap.appendChild(title);
+
+    var phonetics = (entry.phonetics || []).filter(function(p) { return p.text; });
+    if (phonetics.length) {
+      var phonRow = document.createElement('div');
+      phonRow.className = 'phonetics';
+      phonetics.slice(0, 3).forEach(function(p) {
+        var badge = document.createElement('div');
+        badge.className = 'phonetic-badge';
+        var sp = document.createElement('span');
+        sp.textContent = p.text;
+        badge.appendChild(sp);
+        if (p.audio) {
+          var pb = document.createElement('button');
+          pb.className = 'play-btn';
+          pb.innerHTML = '<svg viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9"/></svg>';
+          pb.addEventListener('click', (function(url) {
+            return function() { new Audio(url).play(); };
+          })(p.audio));
+          badge.appendChild(pb);
+        }
+        phonRow.appendChild(badge);
+      });
+      wrap.appendChild(phonRow);
+    }
+
+    var sources = [];
+    data.forEach(function(e) {
+      (e.sourceUrls || []).forEach(function(s) {
+        if (sources.indexOf(s) === -1) sources.push(s);
+      });
+    });
+    if (sources.length) {
+      var srcRow = document.createElement('div');
+      srcRow.className = 'source-row';
+      srcRow.appendChild(document.createTextNode('Source:'));
+      sources.forEach(function(s) {
+        var a = document.createElement('a');
+        a.className = 'source-pill';
+        a.href = s;
+        a.target = '_blank';
+        a.textContent = s.replace(/https?:\/\/(www\.)?/, '').split('/')[0];
+        srcRow.appendChild(a);
+      });
+      if (entry.license) {
+        var la = document.createElement('a');
+        la.className = 'source-pill';
+        la.href = entry.license.url;
+        la.target = '_blank';
+        la.textContent = entry.license.name;
+        srcRow.appendChild(la);
+      }
+      wrap.appendChild(srcRow);
+    }
+
+    data.forEach(function(e) {
+      (e.meanings || []).forEach(function(m) {
+        var card = document.createElement('div');
+        card.className = 'meaning-card';
+
+        var pos = document.createElement('div');
+        pos.className = 'pos';
+        pos.textContent = m.partOfSpeech;
+        card.appendChild(pos);
+
+        (m.definitions || []).slice(0, 3).forEach(function(d, i) {
+          var item = document.createElement('div');
+          item.className = 'def-item';
+
+          var num = document.createElement('div');
+          num.className = 'def-num';
+          num.textContent = (i + 1) + '.';
+          item.appendChild(num);
+
+          var def = document.createElement('div');
+          def.className = 'def-text';
+          def.textContent = d.definition;
+          item.appendChild(def);
+
+          if (d.example) {
+            var ex = document.createElement('div');
+            ex.className = 'example';
+            ex.textContent = '\u201c' + d.example + '\u201d';
+            item.appendChild(ex);
+          }
+          card.appendChild(item);
+        });
+
+        var synList = unique((m.synonyms || []).concat(flatMap(m.definitions || [], function(d) { return d.synonyms || []; }))).slice(0, 7);
+        var antList = unique((m.antonyms || []).concat(flatMap(m.definitions || [], function(d) { return d.antonyms || []; }))).slice(0, 5);
+
+        if (synList.length) {
+          var row = document.createElement('div');
+          row.className = 'tags-row';
+          var lbl = document.createElement('span');
+          lbl.className = 'tag-label syn-label';
+          lbl.textContent = 'Synonyms:';
+          row.appendChild(lbl);
+          synList.forEach(function(s) {
+            var t = document.createElement('button');
+            t.className = 'tag syn-tag';
+            t.textContent = s;
+            t.addEventListener('click', function() { inp.value = s; lookup(); });
+            row.appendChild(t);
+          });
+          card.appendChild(row);
+        }
+
+        if (antList.length) {
+          var row2 = document.createElement('div');
+          row2.className = 'tags-row';
+          var lbl2 = document.createElement('span');
+          lbl2.className = 'tag-label ant-label';
+          lbl2.textContent = 'Antonyms:';
+          row2.appendChild(lbl2);
+          antList.forEach(function(a) {
+            var t = document.createElement('button');
+            t.className = 'tag ant-tag';
+            t.textContent = a;
+            t.addEventListener('click', function() { inp.value = a; lookup(); });
+            row2.appendChild(t);
+          });
+          card.appendChild(row2);
+        }
+
+        wrap.appendChild(card);
+      });
+    });
+
+    if (entry.origin) {
+      var orig = document.createElement('div');
+      orig.className = 'origin-card';
+      var strong = document.createElement('strong');
+      strong.textContent = 'Origin: ';
+      orig.appendChild(strong);
+      orig.appendChild(document.createTextNode(entry.origin));
+      wrap.appendChild(orig);
+    }
+
+    results.innerHTML = '';
+    results.appendChild(wrap);
+  }
+})();
+</script>
+</body>
+</html>
